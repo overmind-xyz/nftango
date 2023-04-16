@@ -4,7 +4,16 @@ module overmind::nftango_test {
     #[test_only]
     use aptos_token::token;
     #[test_only]
-    use overmind::nftango::{initialize_game, assert_nftango_store_exists, cancel_game, assert_nftango_store_is_not_active, join_game, assert_nftango_store_has_an_opponent, play_game, claim};
+    use overmind::nftango::{
+        initialize_game,
+        assert_nftango_store_exists,
+        cancel_game,
+        assert_nftango_store_is_not_active,
+        join_game,
+        assert_nftango_store_has_an_opponent,
+        play_game,
+        claim
+    };
     #[test_only]
     use std::signer;
     #[test_only]
@@ -44,7 +53,12 @@ module overmind::nftango_test {
             vector<bool>[false, false, false, false, true],
         );
 
-        let (nft_creator, nft_collection_name, nft_token_name, nft_property_version) = token::get_token_id_fields(
+        let (
+            nft_creator,
+            nft_collection_name,
+            nft_token_name,
+            nft_property_version
+        ) = token::get_token_id_fields(
             &token_id
         );
 
@@ -64,7 +78,7 @@ module overmind::nftango_test {
     }
 
     #[test(aptos_framework = @0x1, nft_owner = @0xCAFE, creator = @0x12)]
-    #[expected_failure(abort_code = 196608, location = overmind::nftango)]
+    #[expected_failure(abort_code = 0, location = overmind::nftango)]
     fun test_initialize_game_failure_nftango_already_exists(
         aptos_framework: &signer,
         nft_owner: &signer,
@@ -170,7 +184,7 @@ module overmind::nftango_test {
     }
 
     #[test(aptos_framework = @0x1, nft_owner = @0xCAFE, creator = @0x12)]
-    #[expected_failure(abort_code = 65539, location = overmind::nftango)]
+    #[expected_failure(abort_code = 3, location = overmind::nftango)]
     fun test_cancel_game_failure_is_not_active(
         aptos_framework: &signer,
         nft_owner: &signer,
@@ -221,7 +235,7 @@ module overmind::nftango_test {
     }
 
     #[test(aptos_framework = @0x1, nft_owner = @0xCAFE, creator = @0x12, opponent = @0x34)]
-    #[expected_failure(abort_code = 65540, location = overmind::nftango)]
+    #[expected_failure(abort_code = 5, location = overmind::nftango)]
     fun test_cancel_game_failure_already_has_an_opponent(
         aptos_framework: &signer,
         nft_owner: &signer,
@@ -367,7 +381,7 @@ module overmind::nftango_test {
     }
 
     #[test(aptos_framework = @0x1, nft_owner = @0xCAFE, creator = @0x12, opponent = @0x34)]
-    #[expected_failure(abort_code = 65540, location = overmind::nftango)]
+    #[expected_failure(abort_code = 5, location = overmind::nftango)]
     fun test_join_game_failure_has_an_opponent(
         aptos_framework: &signer,
         nft_owner: &signer,
@@ -447,7 +461,7 @@ module overmind::nftango_test {
     }
 
     #[test(aptos_framework = @0x1, nft_owner = @0xCAFE, creator = @0x12, opponent = @0x34)]
-    #[expected_failure(abort_code = 65542, location = overmind::nftango)]
+    #[expected_failure(abort_code = 6, location = overmind::nftango)]
     fun test_join_game_failure_join_amount_requirement_is_not_met(
         aptos_framework: &signer,
         nft_owner: &signer,
@@ -942,7 +956,7 @@ module overmind::nftango_test {
     }
 
     #[test(aptos_framework = @0x1, nft_owner = @0xCAFE, creator = @0x12, opponent = @0x34)]
-    #[expected_failure(abort_code = 65545, location = overmind::nftango)]
+    #[expected_failure(abort_code = 9, location = overmind::nftango)]
     fun test_claim_failure_has_claimed(
         aptos_framework: &signer,
         nft_owner: &signer,
@@ -1022,7 +1036,7 @@ module overmind::nftango_test {
     }
 
     #[test(aptos_framework = @0x1, nft_owner = @0xCAFE, creator = @0x12, opponent = @0x34, random = @0x56)]
-    #[expected_failure(abort_code = 65546, location = overmind::nftango)]
+    #[expected_failure(abort_code = 10, location = overmind::nftango)]
     fun test_claim_failure_is_not_player(
         aptos_framework: &signer,
         nft_owner: &signer,
