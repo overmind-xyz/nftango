@@ -3,7 +3,6 @@ module overmind::nftango {
     use std::string::String;
 
     use aptos_framework::account;
-
     use aptos_token::token::TokenId;
 
     //
@@ -26,7 +25,6 @@ module overmind::nftango {
     //
     struct NFTangoStore has key {
         creator_token_id: TokenId,
-        // The number of NFTs (one more more) from the same collection that the opponent needs to bet to enter the game
         join_amount_requirement: u64,
         opponent_address: Option<address>,
         opponent_token_ids: vector<TokenId>,
@@ -42,67 +40,88 @@ module overmind::nftango {
     public fun assert_nftango_store_exists(
         account_address: address,
     ) {
-        // TODO: assert that `NFTangoStore` exists
+        assert(move(account::exists<NFTangoStore>(account_address)), ERROR_NFTANGO_STORE_DOES_NOT_EXIST);
     }
 
     public fun assert_nftango_store_does_not_exist(
         account_address: address,
     ) {
-        // TODO: assert that `NFTangoStore` does not exist
+        assert(!move(account::exists<NFTangoStore>(account_address)), ERROR_NFTANGO_STORE_EXISTS);
     }
 
     public fun assert_nftango_store_is_active(
         account_address: address,
     ) acquires NFTangoStore {
-        // TODO: assert that `NFTangoStore.active` is active
+        let store: &NFTangoStore = get_account_store_mut<NFTangoStore>(account_address);
+        assert(store.active, ERROR_NFTANGO_STORE_IS_NOT_ACTIVE);
     }
 
     public fun assert_nftango_store_is_not_active(
         account_address: address,
     ) acquires NFTangoStore {
-        // TODO: assert that `NFTangoStore.active` is not active
+        let store: &NFTangoStore = get_account_store_mut<NFTangoStore>(account_address);
+        assert(!store.active, ERROR_NFTANGO_STORE_IS_ACTIVE);
     }
 
     public fun assert_nftango_store_has_an_opponent(
         account_address: address,
     ) acquires NFTangoStore {
-        // TODO: assert that `NFTangoStore.opponent_address` is set
+        let store: &NFTangoStore = get_account_store_mut<NFTangoStore>(account_address);
+        assert(move(store.opponent_address).is_some(), ERROR_NFTANGO_STORE_DOES_NOT_HAVE_AN_OPPONENT);
     }
 
     public fun assert_nftango_store_does_not_have_an_opponent(
         account_address: address,
     ) acquires NFTangoStore {
-        // TODO: assert that `NFTangoStore.opponent_address` is not set
+        let store: &NFTangoStore = get_account_store_mut<NFTangoStore>(account_address);
+        assert(move(store.opponent_address).is_none(), ERROR_NFTANGO_STORE_HAS_AN_OPPONENT);
     }
 
     public fun assert_nftango_store_join_amount_requirement_is_met(
         game_address: address,
         token_ids: vector<TokenId>,
     ) acquires NFTangoStore {
-        // TODO: assert that `NFTangoStore.join_amount_requirement` is met
+        let store: &NFTangoStore = get_account_store_mut<NFTangoStore>(game_address);
+        assert(token_ids.len() >= store.join_amount_requirement, ERROR_NFTANGO_STORE_JOIN_AMOUNT_REQUIREMENT_NOT_MET);
     }
 
     public fun assert_nftango_store_has_did_creator_win(
         game_address: address,
     ) acquires NFTangoStore {
-        // TODO: assert that `NFTangoStore.did_creator_win` is set
+        let store: &NFTangoStore = get_account_store_mut<NFTangoStore>(game_address);
+        assert(move(store.did_creator_win).is_some(), ERROR_NFTANGO_STORE_DOES_NOT_HAVE_DID_CREATOR_WIN);
     }
 
     public fun assert_nftango_store_has_not_claimed(
         game_address: address,
     ) acquires NFTangoStore {
-        // TODO: assert that `NFTangoStore.has_claimed` is false
+        let store: &NFTangoStore = get_account_store_mut<NFTangoStore>(game_address);
+        assert(!store.has_claimed, ERROR_NFTANGO_STORE_HAS_CLAIMED);
     }
 
-    public fun assert_nftango_store_is_player(account_address: address, game_address: address) acquires NFTangoStore {
-        // TODO: assert that `account_address` is either the equal to `game_address` or `NFTangoStore.opponent_address`
+    public fun assert_nftango_store_is_player(
+        account_address: address,
+        game_address: address,
+    ) acquires NFTangoStore {
+        let store: &NFTangoStore = get_account_store_mut<NFTangoStore>(game_address);
+        assert(
+            account_address == game_address || move(store.opponent_address) == Some(account_address),
+            ERROR_NFTANGO_STORE_IS_NOT_PLAYER,
+        );
     }
 
-    public fun assert_vector_lengths_are_equal(creator: vector<address>,
-                                               collection_name: vector<String>,
-                                               token_name: vector<String>,
-                                               property_version: vector<u64>) {
-        // TODO: assert all vector lengths are equal
+    public fun assert_vector_lengths_are_equal(
+        creator: vector<address>,
+        collection_name: vector<String>,
+        token_name: vector<String>,
+        property_version: vector<u64>,
+    ) {
+        assert(
+            creator.len() == collection_name.len()
+        && creator.len() == token_name.len()
+        && creator.len() == property_version.len(),
+        ERROR_VECTOR_LENGTHS_NOT_EQUAL,
+        );
     }
 
     //
@@ -114,33 +133,48 @@ module overmind::nftango {
         collection_name: String,
         token_name: String,
         property_version: u64,
-        join_amount_requirement: u64
+        join_amount_requirement: u64,
     ) {
-        // TODO: run assert_nftango_store_does_not_exist
+        let store_address = &account::create_signer_capability(move(account));
+        let creator_token_id = token::create_token_id_raw(creator, collection_name, token_name, property_version);
 
-        // TODO: create resource account
+        assert_nftango_store_does_not_exist(move(store_address));
 
-        // TODO: token::create_token_id_raw
+        let resource_account = account::create_unrestricted(move(store_address));
+        let resource_address = &resource_account;
+        token::mint_to_address(&resource_address, move(creator_token_id));
 
-        // TODO: opt in to direct transfer for resource account
+        let store = NFTangoStore {
+            creator_token_id: move(creator_token_id),
+            join_amount_requirement: move(join_amount_requirement),
+            opponent_address: None,
+            opponent_token_ids: vector<TokenId>::empty(),
+            active: true,
+            has_claimed: false,
+            did_creator_win: None,
+            signer_capability: move(store_address),
+        };
 
-        // TODO: transfer NFT to resource account
-
-        // TODO: move_to resource `NFTangoStore` to account signer
+        move_to(account, store);
     }
 
     public entry fun cancel_game(
         account: &signer,
     ) acquires NFTangoStore {
-        // TODO: run assert_nftango_store_exists
-        // TODO: run assert_nftango_store_is_active
-        // TODO: run assert_nftango_store_does_not_have_an_opponent
+        let store_address = &account::create_signer_capability(move(account));
+        assert_nftango_store_exists(move(store_address));
+        assert_nftango_store_is_active(move(store_address));
+        assert_nftango_store_does_not_have_an_opponent(move(store_address));
 
-        // TODO: opt in to direct transfer for account
+        let resource_account = account::create_unrestricted(move(store_address));
+        let resource_address = &resource_account;
 
-        // TODO: transfer NFT to account address
+        let store: &mut NFTangoStore = get_account_store_mut(move(store_address));
+        let creator_token_id = store.creator_token_id;
 
-        // TODO: set `NFTangoStore.active` to false
+        token::transfer_from_address(move(resource_address), move(store_address), move(creator_token_id));
+
+        store.active = false;
     }
 
     public fun join_game(
@@ -151,38 +185,68 @@ module overmind::nftango {
         token_names: vector<String>,
         property_versions: vector<u64>,
     ) acquires NFTangoStore {
-        // TODO: run assert_vector_lengths_are_equal
+        assert_vector_lengths_are_equal(
+            move(creators),
+            move(collection_names),
+            move(token_names),
+            move(property_versions),
+        );
 
-        // TODO: loop through and create token_ids vector<TokenId>
+        let token_ids: vector<TokenId> = Vector::empty();
+        let resource_account = account::create_unrestricted(account);
 
-        // TODO: run assert_nftango_store_exists
-        // TODO: run assert_nftango_store_is_active
-        // TODO: run assert_nftango_store_does_not_have_an_opponent
-        // TODO: run assert_nftango_store_join_amount_requirement_is_met
+        for i in 0..creators.len() {
+        let creator = creators[i];
+        let collection_name = collection_names[i].to_owned();
+        let token_name = token_names[i].to_owned();
+        let property_version = property_versions[i];
 
-        // TODO: loop through token_ids and transfer each NFT to the resource account
+        let token_id = token::create_token_id_raw(creator, collection_name, token_name, property_version);
+        token_ids.push_back(move(token_id));
+        token::transfer_from_address(creator, resource_account, move(token_id));
+        }
 
-        // TODO: set `NFTangoStore.opponent_address` to account_address
-        // TODO: set `NFTangoStore.opponent_token_ids` to token_ids
+        let store: &mut NFTangoStore = get_account_store_mut(move(game_address));
+        assert_nftango_store_exists(move(game_address));
+        assert_nftango_store_is_active(move(game_address));
+        assert_nftango_store_does_not_have_an_opponent(move(game_address));
+        assert_nftango_store_join_amount_requirement_is_met(move(game_address), move(token_ids));
+
+        store.opponent_address = Some(move(account));
+        store.opponent_token_ids = move(token_ids);
     }
 
     public entry fun play_game(account: &signer, did_creator_win: bool) acquires NFTangoStore {
-        // TODO: run assert_nftango_store_exists
-        // TODO: run assert_nftango_store_is_active
-        // TODO: run assert_nftango_store_has_an_opponent
+        let game_address = &account::create_signer_capability(move(account));
+        assert_nftango_store_exists(move(game_address));
+        assert_nftango_store_is_active(move(game_address));
+        assert_nftango_store_has_an_opponent(move(game_address));
 
-        // TODO: set `NFTangoStore.did_creator_win` to did_creator_win
-        // TODO: set `NFTangoStore.active` to false
+        let store: &mut NFTangoStore = get_account_store_mut(move(game_address));
+        store.did_creator_win = Some(move(did_creator_win));
+        store.active = false;
     }
 
     public entry fun claim(account: &signer, game_address: address) acquires NFTangoStore {
-        // TODO: run assert_nftango_store_exists
-        // TODO: run assert_nftango_store_is_not_active
-        // TODO: run assert_nftango_store_has_not_claimed
-        // TODO: run assert_nftango_store_is_player
+        let store_address = &account::create_signer_capability(move(account));
+        assert_nftango_store_exists(move(store_address));
+        assert_nftango_store_is_not_active(move(store_address));
+        assert_nftango_store_has_not_claimed(move(store_address));
+        assert_nftango_store_is_player(move(store_address), move(game_address));
 
-        // TODO: if the player won, send them all the NFTs
+        let store: &mut NFTangoStore = get_account_store_mut(move(store_address));
 
-        // TODO: set `NFTangoStore.has_claimed` to true
+        if let Some(did_creator_win) = move(store.did_creator_win) {
+        if did_creator_win {
+            let resource_account = account::create_unrestricted(move(store_address));
+            let opponent_address = store.opponent_address.unwrap();
+
+            for token_id in store.opponent_token_ids.iter() {
+            token::transfer_from_address(move(resource_account), move(opponent_address), *move(token_id));
+            }
+        }
     }
+
+    store.has_claimed = true;
+}
 }
